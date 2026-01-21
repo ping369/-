@@ -13,20 +13,224 @@ import json
 
 from openpyxl import load_workbook
 
+PDF_HELPER = r"""
+<script>
+(function(){
+  function mmToPt(v){ return v * 2.83465; }
+  function escapePdf(text){
+    return String(text).replace(/\\/g,"\\\\").replace(/\(/g,"\\(").replace(/\)/g,"\\)").replace(/\r?\n/g," ");
+  }
+  class SimplePDF {
+    constructor(opts){
+      this.widthMm = (opts && opts.format && opts.format[0]) || 210;
+      this.heightMm = (opts && opts.format && opts.format[1]) || 297;
+      this.fontSize = 10;
+      this.lines = [];
+    }
+    text(txt, x, y){
+      this.lines.push({txt:String(txt), x:Number(x || 0), y:Number(y || 0)});
+    }
+    getTextWidth(txt){
+      return String(txt).length * (this.fontSize * 0.5);
+    }
+    save(name){
+      const wPt = mmToPt(this.widthMm);
+      const hPt = mmToPt(this.heightMm);
+      const parts = [];
+      parts.push("BT");
+      parts.push("/F1 "+this.fontSize+" Tf");
+      this.lines.forEach(line=>{
+        const x = mmToPt(line.x).toFixed(2);
+        const y = (hPt - mmToPt(line.y)).toFixed(2);
+        parts.push(`1 0 0 1 ${x} ${y} Tm (${escapePdf(line.txt)}) Tj`);
+      });
+      parts.push("ET");
+      const content = parts.join("\n");
+      const stream = `<< /Length ${content.length} >>\nstream\n${content}\nendstream`;
+      const font = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>";
+      const page = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${wPt.toFixed(2)} ${hPt.toFixed(2)}] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>`;
+      const objects = [
+        "<< /Type /Catalog /Pages 2 0 R >>",
+        "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        page,
+        stream,
+        font
+      ];
+      let pdf = "%PDF-1.4\n";
+      const offsets = [];
+      objects.forEach((obj, idx)=>{
+        offsets.push(pdf.length);
+        pdf += `${idx+1} 0 obj\n${obj}\nendobj\n`;
+      });
+      const xrefOffset = pdf.length;
+      const xref = ["xref","0 "+(objects.length+1),"0000000000 65535 f "];
+      offsets.forEach(off=>{ xref.push(off.toString().padStart(10,"0")+" 00000 n "); });
+      pdf += xref.join("\n")+"\n";
+      pdf += "trailer << /Size "+(objects.length+1)+" /Root 1 0 R >>\nstartxref\n"+xrefOffset+"\n%%EOF";
+      const blob = new Blob([pdf], {type:"application/pdf"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = name || "ticket.pdf";
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url), 2000);
+    }
+  }
+  window.jspdf = { jsPDF: SimplePDF };
+})();
+</script>
+"""
+
+BARCODE_HELPER = r"""
+<script>
+(function(){
+  const patterns = {
+    "0":"nnnwwnwnn","1":"wnnwnnnnw","2":"nnwwnnnnw","3":"wnwwnnnnn","4":"nnnwwnnnw","5":"wnnwwnnnn","6":"nnwwwnnnn","7":"nnnwnnwnw","8":"wnnwnnwnn","9":"nnwwnnwnn",
+    "A":"wnnnnwnnw","B":"nnwnnwnnw","C":"wnwnnwnnn","D":"nnnnwwnnw","E":"wnnnwwnnn","F":"nnwnwwnnn","G":"nnnnnwwnw","H":"wnnnnwwnn","I":"nnwnnwwnn","J":"nnnnwwwnn",
+    "K":"wnnnnnnww","L":"nnwnnnnww","M":"wnwnnnnwn","N":"nnnnwnnww","O":"wnnnwnnwn","P":"nnwnwnnwn","Q":"nnnnnnwww","R":"wnnnnnwwn","S":"nnwnnnwwn","T":"nnnnwnwwn",
+    "U":"wwnnnnnnw","V":"nwwnnnnnw","W":"wwwnnnnnn","X":"nwnnwnnnw","Y":"wwnnwnnnn","Z":"nwwnwnnnn","-":"nwnnnnwnw",".":"wwnnnnwnn"," ":"nwwnnnwnn","*":"nwnnwnwnn",
+    "$":"nwnwnwnnn","/":"nwnwnnnwn","+":"nwnnnwnwn","%":"nnnwnwnwn"
+  };
+  function patternToBars(pattern, moduleWidth, startX){
+    const bars = [];
+    let x = startX;
+    let drawBar = true;
+    for(const ch of pattern){
+      const w = ch === "w" ? moduleWidth * 3 : moduleWidth;
+      if(drawBar) bars.push({x, w});
+      x += w;
+      drawBar = !drawBar;
+    }
+    return {bars, endX: x};
+  }
+  window.buildCode39SVG = function(data){
+    const input = "*"+String(data||"").toUpperCase()+"*";
+    const moduleWidth = 1.2;
+    const height = 40;
+    const gap = moduleWidth;
+    let x = 0;
+    const segments = [];
+    for(const ch of input){
+      const pattern = patterns[ch];
+      if(!pattern) return "";
+      const res = patternToBars(pattern, moduleWidth, x);
+      segments.push(res);
+      x = res.endX + gap;
+    }
+    const totalWidth = x - gap;
+    let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${totalWidth}" height="${height}" viewBox="0 0 ${totalWidth} ${height}">`;
+    segments.forEach(seg=>{
+      seg.bars.forEach(b=>{
+        svg += `<rect x="${b.x}" y="0" width="${b.w}" height="${height}" fill="#000"/>`;
+      });
+    });
+    svg += "</svg>";
+    return svg;
+  };
+})();
+</script>
+"""
+
 # Column header options in multiple languages
 BARCODE_HEADERS = ["条码", "barcode", "Código", "codigo", "Codigo", "Código de barras"]
 NAME_HEADERS = ["名称", "商品名称", "Producto", "nombre", "Nombre"]
 PRICE_HEADERS = ["零售价", "售价", "价格", "precio", "Precio"]
+
+INLINE_STYLES = """
+* { box-sizing: border-box; }
+body { font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif; }
+.bg-gray-100 { background-color: #f3f4f6; }
+.bg-white { background-color: #ffffff; }
+.bg-blue-600 { background-color: #2563eb; color: #fff; }
+.bg-red-600 { background-color: #dc2626; color: #fff; }
+.bg-green-600 { background-color: #16a34a; color: #fff; }
+.bg-emerald-600 { background-color: #059669; color: #fff; }
+.bg-gray-50 { background-color: #f9fafb; }
+.bg-gray-200 { background-color: #e5e7eb; }
+.text-gray-500 { color: #6b7280; }
+.text-gray-600 { color: #4b5563; }
+.text-gray-400 { color: #9ca3af; }
+.text-gray-700 { color: #374151; }
+.text-gray-800 { color: #1f2937; }
+.text-white { color: #ffffff; }
+.text-xs { font-size: 0.75rem; line-height: 1rem; }
+.text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+.text-lg { font-size: 1.125rem; line-height: 1.75rem; }
+.text-xl { font-size: 1.25rem; line-height: 1.75rem; }
+.text-[11px] { font-size: 11px; }
+.text-[10px] { font-size: 10px; }
+.font-bold { font-weight: 700; }
+.font-semibold { font-weight: 600; }
+.rounded { border-radius: 0.25rem; }
+.shadow { box-shadow: 0 1px 2px rgba(0,0,0,0.05), 0 1px 3px rgba(0,0,0,0.1); }
+.p-4 { padding: 1rem; }
+.p-3 { padding: 0.75rem; }
+.p-2 { padding: 0.5rem; }
+.p-1 { padding: 0.25rem; }
+.px-2 { padding-left: 0.5rem; padding-right: 0.5rem; }
+.px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }
+.px-4 { padding-left: 1rem; padding-right: 1rem; }
+.py-1 { padding-top: 0.25rem; padding-bottom: 0.25rem; }
+.py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+.py-3 { padding-top: 0.75rem; padding-bottom: 0.75rem; }
+.py-4 { padding-top: 1rem; padding-bottom: 1rem; }
+.mt-1 { margin-top: 0.25rem; }
+.mt-2 { margin-top: 0.5rem; }
+.mb-2 { margin-bottom: 0.5rem; }
+.ml-2 { margin-left: 0.5rem; }
+.space-y-3 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.75rem; }
+.space-y-4 > :not([hidden]) ~ :not([hidden]) { margin-top: 1rem; }
+.space-y-2 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.5rem; }
+.flex { display: flex; }
+.flex-1 { flex: 1 1 0%; }
+.flex-col { flex-direction: column; }
+.flex-row { flex-direction: row; }
+.flex-wrap { flex-wrap: wrap; }
+.items-center { align-items: center; }
+.items-start { align-items: flex-start; }
+.items-end { align-items: flex-end; }
+.justify-between { justify-content: space-between; }
+.justify-end { justify-content: flex-end; }
+.gap-2 { gap: 0.5rem; }
+.gap-3 { gap: 0.75rem; }
+.gap-4 { gap: 1rem; }
+.w-full { width: 100%; }
+.w-20 { width: 5rem; }
+.w-28 { width: 7rem; }
+.w-40 { width: 10rem; }
+.h-2 { height: 0.5rem; }
+.max-h-40 { max-height: 10rem; }
+.max-h-56 { max-height: 14rem; }
+.overflow-y-auto { overflow-y: auto; }
+.text-right { text-align: right; }
+.text-center { text-align: center; }
+.grid { display: grid; }
+.grid-cols-1 { grid-template-columns: repeat(1,minmax(0,1fr)); }
+.grid-cols-4 { grid-template-columns: repeat(4,minmax(0,1fr)); }
+.border { border: 1px solid #d1d5db; }
+.border-b { border-bottom: 1px solid #e5e7eb; }
+.hidden { display: none; }
+button { cursor: pointer; }
+button:disabled, input:disabled, textarea:disabled, select:disabled { opacity: 0.6; cursor: not-allowed; }
+input, textarea, select, button { font: inherit; }
+input, textarea, select { border: 1px solid #d1d5db; border-radius: 0.25rem; padding: 0.5rem 0.75rem; }
+@media (min-width: 768px) {
+  .md\:flex-row { flex-direction: row; }
+  .md\:items-center { align-items: center; }
+  .md\:items-end { align-items: flex-end; }
+  .md\:justify-between { justify-content: space-between; }
+  .md\:grid-cols-4 { grid-template-columns: repeat(4,minmax(0,1fr)); }
+}
+"""
 
 HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang=\"zh-CN\">
 <head>
 <meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
 <title>智能收银系统 · 稳定不卡版（按你指定顺序）</title>
-<script src=\"https://cdn.tailwindcss.com\"></script>
-<script src=\"https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js\"></script>
-<!-- JsBarcode：主页面加载一次；打印时复用生成好的SVG，不在新窗口再加载，避免“转圈卡死” -->
-<script src=\"https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js\" defer></script>
+<style>__INLINE_STYLES__</style>
+__PDF_HELPER__
+__BARCODE_HELPER__
 </head>
 <body class=\"bg-gray-100 p-4 space-y-3\">
 
@@ -387,7 +591,7 @@ function clearSales(){
   if(confirm("确定清空门店 "+s+" 的所有销售记录吗？")){saveSales(kept); updateTodayStats(); renderReport("today");}
 }
 
-// ====== 条码标签打印：用主页面 JsBarcode 生成SVG，再复制到新窗口（不加载脚本） ======
+// ====== 条码标签打印：使用内置 Code39 生成SVG，再复制到新窗口（不加载外部脚本） ======
 function fillLabelFromBarcode(){
   const code=(document.getElementById("labelCode").value||"").trim(); if(!code) return;
   const it=item(code); if(!it){alert("未找到该条码商品");return;}
@@ -396,15 +600,7 @@ function fillLabelFromBarcode(){
 }
 
 function buildBarcodeSVG(code){
-  // 若JsBarcode未加载，降级：返回空，后面只打印数字
-  if(typeof JsBarcode === "undefined") return "";
-  const svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
-  try {
-    JsBarcode(svg, code, {format:"CODE128", width:1, height:40, margin:0, displayValue:false});
-    return svg.outerHTML;
-  } catch(e) {
-    return "";
-  }
+  return typeof buildCode39SVG === "function" ? buildCode39SVG(code) : "";
 }
 
 function printBarcodeLabels(){
@@ -501,6 +697,9 @@ def render_html(rows: Sequence[Sequence[object]]) -> str:
     data_js = json.dumps(rows, ensure_ascii=False)
     html = HTML_TEMPLATE.replace("__COUNT__", str(len(rows)))
     html = html.replace("__DATA__", data_js)
+    html = html.replace("__INLINE_STYLES__", INLINE_STYLES)
+    html = html.replace("__PDF_HELPER__", PDF_HELPER)
+    html = html.replace("__BARCODE_HELPER__", BARCODE_HELPER)
     return html
 
 
