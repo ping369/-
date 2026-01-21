@@ -46,7 +46,13 @@ PDF_HELPER = r"""
       });
       parts.push("ET");
       const content = parts.join("\n");
-      const stream = `<< /Length ${content.length} >>\nstream\n${content}\nendstream`;
+      const encoder = new TextEncoder();
+      const contentBytes = encoder.encode(content);
+      const stream = [
+        `<< /Length ${contentBytes.length} >>\nstream\n`,
+        contentBytes,
+        "\nendstream"
+      ];
       const font = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>";
       const page = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${wPt.toFixed(2)} ${hPt.toFixed(2)}] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>`;
       const objects = [
@@ -56,18 +62,37 @@ PDF_HELPER = r"""
         stream,
         font
       ];
-      let pdf = "%PDF-1.4\n";
+      const chunks = [];
+      let length = 0;
+      const pushChunk = (chunk)=>{
+        if(typeof chunk === "string"){
+          const bytes = encoder.encode(chunk);
+          chunks.push(bytes);
+          length += bytes.length;
+          return;
+        }
+        chunks.push(chunk);
+        length += chunk.length;
+      };
+      const pushString = (str)=>{ pushChunk(str); };
+      pushString("%PDF-1.4\n");
       const offsets = [];
       objects.forEach((obj, idx)=>{
-        offsets.push(pdf.length);
-        pdf += `${idx+1} 0 obj\n${obj}\nendobj\n`;
+        offsets.push(length);
+        pushString(`${idx+1} 0 obj\n`);
+        if(Array.isArray(obj)){
+          obj.forEach(chunk=>pushChunk(chunk));
+        }else{
+          pushString(obj);
+        }
+        pushString("\nendobj\n");
       });
-      const xrefOffset = pdf.length;
+      const xrefOffset = length;
       const xref = ["xref","0 "+(objects.length+1),"0000000000 65535 f "];
       offsets.forEach(off=>{ xref.push(off.toString().padStart(10,"0")+" 00000 n "); });
-      pdf += xref.join("\n")+"\n";
-      pdf += "trailer << /Size "+(objects.length+1)+" /Root 1 0 R >>\nstartxref\n"+xrefOffset+"\n%%EOF";
-      const blob = new Blob([pdf], {type:"application/pdf"});
+      pushString(xref.join("\n")+"\n");
+      pushString("trailer << /Size "+(objects.length+1)+" /Root 1 0 R >>\nstartxref\n"+xrefOffset+"\n%%EOF");
+      const blob = new Blob(chunks, {type:"application/pdf"});
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
