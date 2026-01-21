@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能收银系统 - 仪表盘</title>
+    <!-- Tailwind CSS v3 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1a365d',
+                        secondary: '#ed8936',
+                        success: '#48bb78',
+                        warning: '#ecc94b',
+                        danger: '#f56565',
+                        'primary-light': '#2c5282',
+                        'secondary-light': '#f6ad55',
+                        'dark': '#1a202c',
+                        'dark-light': '#2d3748',
+                        'dark-lighter': '#4a5568'
+                    },
+                    fontFamily: {
+                        sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif']
+                    },
+                    boxShadow: {
+                        'card': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                        'card-hover': '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .bg-gradient-primary {
+                background: linear-gradient(135deg, theme('colors.primary'), theme('colors.primary-light'));
+            }
+            .bg-gradient-secondary {
+                background: linear-gradient(135deg, theme('colors.secondary'), theme('colors.secondary-light'));
+            }
+            .bg-gradient-success {
+                background: linear-gradient(135deg, theme('colors.success'), #38a169);
+            }
+            .bg-gradient-warning {
+                background: linear-gradient(135deg, theme('colors.warning'), #d69e2e);
+            }
+            .bg-gradient-danger {
+                background: linear-gradient(135deg, theme('colors.danger'), #e53e3e);
+            }
+            .text-shadow {
+                text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            }
+            .transition-all-300 {
+                transition: all 0.3s ease;
+            }
+            .card-hover {
+                @apply hover:shadow-card-hover transform hover:-translate-y-1 transition-all duration-300;
+            }
+            .sidebar-link {
+                @apply flex items-center px-4 py-3 text-gray-200 hover:bg-primary-light rounded-md transition-all duration-200;
+            }
+            .sidebar-link.active {
+                @apply bg-secondary text-white;
+            }
+            .sidebar-link i {
+                @apply mr-3 text-lg;
+            }
+            .stat-card {
+                @apply bg-white rounded-lg shadow-card p-6 transition-all duration-300 card-hover;
+            }
+            .stat-icon {
+                @apply w-12 h-12 rounded-full flex items-center justify-center text-white text-xl;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="flex h-screen overflow-hidden">
+        <!-- 侧边栏 -->
+        <aside class="w-64 bg-gradient-primary hidden md:block">
+            <!-- 系统标题 -->
+            <div class="flex items-center justify-center h-16 border-b border-blue-800">
+                <img src="https://p5-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/pc/super_tool/b69c4251069e473581560f4915159647~tplv-a9rns2rl98-image.image?lk3s=8e244e95&rcl=202601210611301BA47EFA16D8202254A3&rrcfp=f06b921b&x-expires=1771539119&x-signature=Ue87KRp0GkoOQ47EPB3yCAY2N6k%3D"
+                     alt="智能收银系统"
+                     class="h-8 mr-2">
+                <h1 class="text-white font-bold text-lg">智能收银系统</h1>
+            </div>
+
+            <!-- 用户信息 -->
+            <div class="p-4 border-b border-blue-800">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 rounded-full bg-blue-200 flex items-center justify-center text-primary font-bold text-lg">
+                        <span id="userInitial">管</span>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-white font-medium" id="userName">管理员</p>
+                        <p class="text-blue-200 text-xs" id="userStore">中心店</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 导航菜单 -->
+            <nav class="mt-4">
+                <ul>
+                    <li class="mb-1">
+                        <a href="dashboard.html" class="sidebar-link active">
+                            <i class="fa fa-dashboard"></i>
+                            <span>仪表盘</span>
+                        </a>
+                    </li>
+                    <li class="mb-1">
+                        <a href="cashier.html" class="sidebar-link">
+                            <i class="fa fa-calculator"></i>
+                            <span>收银结账</span>
+                        </a>
+                    </li>
+                    <li class="mb-1">
+                        <a href="products.html" class="sidebar-link">
+                            <i class="fa fa-cubes"></i>
+                            <span>商品管理</span>
+                        </a>
+                    </li>
+                    <li class="mb-1">
+                        <a href="inventory.html" class="sidebar-link">
+                            <i class="fa fa-list"></i>
+                            <span>库存管理</span>
+                        </a>
+                    </li>
+                    <li class="mb-1">
+                        <a href="reports.html" class="sidebar-link">
+                            <i class="fa fa-bar-chart"></i>
+                            <span>销售报表</span>
+                        </a>
+                    </li>
+                    <li class="mb-1">
+                        <a href="settings.html" class="sidebar-link">
+                            <i class="fa fa-cog"></i>
+                            <span>系统设置</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+
+            <!-- 底部 -->
+            <div class="absolute bottom-0 w-64 p-4 border-t border-blue-800">
+                <button id="logoutBtn" class="sidebar-link w-full justify-center">
+                    <i class="fa fa-sign-out"></i>
+                    <span>退出登录</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- 主内容区 -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <!-- 顶部导航栏 -->
+            <header class="bg-white shadow-sm z-10">
+                <div class="flex items-center justify-between h-16 px-6">
+                    <!-- 移动端菜单按钮 -->
+                    <button id="mobileMenuBtn" class="md:hidden text-gray-600 focus:outline-none">
+                        <i class="fa fa-bars text-xl"></i>
+                    </button>
+
+                    <!-- 页面标题 -->
+                    <h2 class="text-xl font-bold text-gray-800">仪表盘</h2>
+
+                    <!-- 右侧工具栏 -->
+                    <div class="flex items-center space-x-4">
+                        <!-- 通知 -->
+                        <div class="relative">
+                            <button class="text-gray-600 hover:text-gray-800 focus:outline-none">
+                                <i class="fa fa-bell text-xl"></i>
+                                <span class="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
+                            </button>
+                        </div>
+
+                        <!-- 搜索 -->
+                        <div class="relative hidden md:block">
+                            <input type="text" placeholder="搜索..." class="w-64 pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fa fa-search text-gray-400"></i>
+                            </div>
+                        </div>
+
+                        <!-- 用户菜单 -->
+                        <div class="relative">
+                            <button id="userMenuBtn" class="flex items-center text-gray-600 hover:text-gray-800 focus:outline-none">
+                                <div class="w-8 h-8 rounded-full bg-blue-200 flex items-center justify-center text-primary font-bold text-sm mr-2">
+                                    <span id="userInitialHeader">管</span>
+                                </div>
+                                <span class="hidden md:block text-sm font-medium" id="userNameHeader">管理员</span>
+                                <i class="fa fa-chevron-down ml-1 text-xs"></i>
+                            </button>
+
+                            <!-- 下拉菜单 -->
+                            <div id="userMenu" class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 hidden">
+                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">个人资料</a>
+                                <a href="settings.html" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">系统设置</a>
+                                <div class="border-t border-gray-100"></div>
+                                <a href="#" id="userMenuLogout" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">退出登录</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- 移动端侧边栏 -->
+            <div id="mobileSidebar" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-20 hidden">
+                <div class="w-64 h-full bg-gradient-primary transform transition-transform duration-300 -translate-x-full" id="mobileSidebarContent">
+                    <!-- 移动端侧边栏内容将通过JS动态生成 -->
+                </div>
+            </div>
+
+            <!-- 主内容 -->
+            <main class="flex-1 overflow-y-auto p-6 bg-gray-100">
+                <!-- 欢迎卡片 -->
+                <div class="bg-white rounded-lg shadow-card p-6 mb-6">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+                        <div>
+                            <h3 class="text-2xl font-bold text-gray-800">欢迎回来，<span id="welcomeUserName">管理员</span>！</h3>
+                            <p class="text-gray-600 mt-1">今天是 <span id="currentDate"></span>，祝您工作愉快！</p>
+                        </div>
+                        <div class="mt-4 md:mt-0">
+                            <button class="bg-secondary hover:bg-secondary-light text-white px-6 py-2 rounded-md shadow-sm transition-colors duration-200 flex items-center">
+                                <i class="fa fa-plus-circle mr-2"></i>
+                                快速收银
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 统计卡片 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                    <!-- 今日销售 -->
+                    <div class="stat-card">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <p class="text-gray-500 text-sm">今日销售</p>
+                                <h4 class="text-2xl font-bold text-gray-800 mt-1">¥12,458.00</h4>
+                                <p class="text-success text-sm mt-1 flex items-center">
+                                    <i class="fa fa-arrow-up mr-1"></i>
+                                    <span>12.5% 较昨日</span>
+                                </p>
+                            </div>
+                            <div class="stat-icon bg-gradient-secondary">
+                                <i class="fa fa-shopping-cart"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 今日订单 -->
+                    <div class="stat-card">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <p class="text-gray-500 text-sm">今日订单</p>
+                                <h4 class="text-2xl font-bold text-gray-800 mt-1">156</h4>
+                                <p class="text-success text-sm mt-1 flex items-center">
+                                    <i class="fa fa-arrow-up mr-1"></i>
+                                    <span>8.2% 较昨日</span>
+                                </p>
+                            </div>
+                            <div class="stat-icon bg-gradient-primary">
+                                <i class="fa fa-file-text-o"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 库存预警 -->
+                    <div class="stat-card">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <p class="text-gray-500 text-sm">库存预警</p>
+                                <h4 class="text-2xl font-bold text-gray-800 mt-1">12</h4>
+                                <p class="text-danger text-sm mt-1 flex items-center">
+                                    <i class="fa fa-arrow-up mr-1"></i>
+                                    <span>3 个新品低于阈值</span>
+                                </p>
+                            </div>
+                            <div class="stat-icon bg-gradient-warning">
+                                <i class="fa fa-exclamation-triangle"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 新增会员 -->
+                    <div class="stat-card">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <p class="text-gray-500 text-sm">新增会员</p>
+                                <h4 class="text-2xl font-bold text-gray-800 mt-1">8</h4>
+                                <p class="text-success text-sm mt-1 flex items-center">
+                                    <i class="fa fa-arrow-up mr-1"></i>
+                                    <span>2 个较昨日</span>
+                                </p>
+                            </div>
+                            <div class="stat-icon bg-gradient-success">
+                                <i class="fa fa-user-plus"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 图表区域 -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <!-- 销售趋势图 -->
+                    <div class="bg-white rounded-lg shadow-card p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h4 class="text-lg font-bold text-gray-800">销售趋势</h4>
+                            <div class="flex space-x-2">
+                                <button class="px-3 py-1 text-xs rounded-md bg-primary text-white">日</button>
+                                <button class="px-3 py-1 text-xs rounded-md bg-gray-200 text-gray-700">周</button>
+                                <button class="px-3 py-1 text-xs rounded-md bg-gray-200 text-gray-700">月</button>
+                            </div>
+                        </div>
+                        <div class="h-64">
+                            <canvas id="salesTrendChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- 热销商品 -->
+                    <div class="bg-white rounded-lg shadow-card p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h4 class="text-lg font-bold text-gray-800">热销商品</h4>
+                            <button class="text-secondary hover:text-secondary-light text-sm">
+                                查看全部
+                            </button>
+                        </div>
+                        <div class="h-64">
+                            <canvas id="topProductsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI推荐区域 -->
+                <div class="bg-white rounded-lg shadow-card p-6 mb-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center">
+                            <h4 class="text-lg font-bold text-gray-800">AI智能推荐</h4>
+                            <span class="ml-2 px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full">Beta</span>
+                        </div>
+                        <button class="text-secondary hover:text-secondary-light text-sm">
+                            刷新推荐
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <!-- 推荐1 -->
+                        <div class="border border-gray-200 rounded-lg p-4 hover:border-secondary transition-colors duration-200">
+                            <div class="flex items-center mb-3">
+                                <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                                    <i class="fa fa-lightbulb-o"></i>
+                                </div>
+                                <h5 class="ml-3 font-medium text-gray-800">促销建议</h5>
+                            </div>
+                            <p class="text-gray-600 text-sm">根据历史数据，建议对"可口可乐"进行限时促销，预计可提升销量15%。</p>
+                        </div>
+
+                        <!-- 推荐2 -->
+                        <div class="border border-gray-200 rounded-lg p-4 hover:border-secondary transition-colors duration-200">
+                            <div class="flex items-center mb-3">
+                                <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+                                    <i class="fa fa-line-chart"></i>
+                                </div>
+                                <h5 class="ml-3 font-medium text-gray-800">定价优化</h5>
+                            </div>
+                            <p class="text-gray-600 text-sm">建议将"有机蔬菜套装"价格上调5%，客户接受度高，预计可提升利润8%。</p>
+                        </div>
+
+                        <!-- 推荐3 -->
+                        <div class="border border-gray-200 rounded-lg p-4 hover:border-secondary transition-colors duration-200">
+                            <div class="flex items-center mb-3">
+                                <div class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600">
+                                    <i class="fa fa-shopping-basket"></i>
+                                </div>
+                                <h5 class="ml-3 font-medium text-gray-800">补货提醒</h5>
+                            </div>
+                            <p class="text-gray-600 text-sm">"新鲜水果礼盒"库存不足，建议立即补货，避免影响周末销售。</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 最近订单 -->
+                <div class="bg-white rounded-lg shadow-card p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="text-lg font-bold text-gray-800">最近订单</h4>
+                        <button class="text-secondary hover:text-secondary-light text-sm">
+                            查看全部
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead>
+                                <tr>
+                                    <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">订单号</th>
+                                    <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">时间</th>
+                                    <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">商品</th>
+                                    <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">数量</th>
+                                    <th class="px-6 py-3 bg-gray-50 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">金额</th>
+                                    <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">#ORD202501210001</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">2025-01-21 14:32</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">有机蔬菜套装</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">2</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-900">¥128.00</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">已完成</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">#ORD202501210002</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">2025-01-21 14:25</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">可口可乐 2L</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">3</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-900">¥36.00</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">已完成</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">#ORD202501210003</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">2025-01-21 14:18</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">新鲜水果礼盒</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">1</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-900">¥198.00</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">已完成</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">#ORD202501210004</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">2025-01-21 14:10</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">进口牛奶 1L</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">4</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-900">¥72.00</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">处理中</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">#ORD202501210005</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">2025-01-21 14:05</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">巧克力礼盒</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">2</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-900">¥156.00</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">已完成</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        // 页面加载时检查用户登录状态
+        document.addEventListener('DOMContentLoaded', function() {
+            // 获取当前用户信息
+            const currentUser = localStorage.getItem('currentUser');
+            if (!currentUser) {
+                // 如果未登录，跳转到登录页面
+                window.location.href = 'index.html';
+                return;
+            }
+
+            // 解析用户信息
+            const user = JSON.parse(currentUser);
+
+            // 更新页面上的用户信息
+            document.getElementById('userName').textContent = user.username === 'admin' ? '管理员' : '收银员';
+            document.getElementById('userNameHeader').textContent = user.username === 'admin' ? '管理员' : '收银员';
+            document.getElementById('welcomeUserName').textContent = user.username === 'admin' ? '管理员' : '收银员';
+            document.getElementById('userStore').textContent = getStoreName(user.store);
+            document.getElementById('userInitial').textContent = user.username === 'admin' ? '管' : '收';
+            document.getElementById('userInitialHeader').textContent = user.username === 'admin' ? '管' : '收';
+
+            // 更新当前日期
+            const now = new Date();
+            const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+            document.getElementById('currentDate').textContent = now.toLocaleDateString('zh-CN', options);
+
+            // 初始化图表
+            initCharts();
+
+            // 设置退出登录事件
+            document.getElementById('logoutBtn').addEventListener('click', logout);
+            document.getElementById('userMenuLogout').addEventListener('click', logout);
+
+            // 设置用户菜单事件
+            document.getElementById('userMenuBtn').addEventListener('click', function() {
+                document.getElementById('userMenu').classList.toggle('hidden');
+            });
+
+            // 点击其他地方关闭用户菜单
+            document.addEventListener('click', function(e) {
+                const userMenu = document.getElementById('userMenu');
+                const userMenuBtn = document.getElementById('userMenuBtn');
+
+                if (!userMenuBtn.contains(e.target) && !userMenu.contains(e.target)) {
+                    userMenu.classList.add('hidden');
+                }
+            });
+
+            // 移动端菜单
+            setupMobileMenu();
+        });
+
+        // 获取门店名称
+        function getStoreName(storeId) {
+            const stores = {
+                'store1': '中心店',
+                'store2': '东区店',
+                'store3': '西区店',
+                'store4': '南区店',
+                'store5': '北区店'
+            };
+
+            return stores[storeId] || storeId;
+        }
+
+        // 退出登录
+        function logout() {
+            localStorage.removeItem('currentUser');
+            window.location.href = 'index.html';
+        }
+
+        // 设置移动端菜单
+        function setupMobileMenu() {
+            const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+            const mobileSidebar = document.getElementById('mobileSidebar');
+            const mobileSidebarContent = document.getElementById('mobileSidebarContent');
+
+            // 复制桌面端侧边栏内容到移动端
+            const desktopSidebar = document.querySelector('aside');
+            mobileSidebarContent.innerHTML = desktopSidebar.innerHTML;
+
+            // 添加关闭按钮
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'absolute top-4 right-4 text-white focus:outline-none';
+            closeBtn.innerHTML = '<i class="fa fa-times text-xl"></i>';
+            closeBtn.addEventListener('click', closeMobileMenu);
+            mobileSidebarContent.prepend(closeBtn);
+
+            // 移动端菜单按钮点击事件
+            mobileMenuBtn.addEventListener('click', function() {
+                mobileSidebar.classList.remove('hidden');
+                setTimeout(() => {
+                    mobileSidebarContent.classList.remove('-translate-x-full');
+                }, 10);
+            });
+
+            // 点击遮罩层关闭菜单
+            mobileSidebar.addEventListener('click', function(e) {
+                if (e.target === mobileSidebar) {
+                    closeMobileMenu();
+                }
+            });
+
+            // 移动端菜单项点击事件
+            mobileSidebarContent.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A' || e.target.parentElement.tagName === 'A') {
+                    closeMobileMenu();
+                }
+            });
+        }
+
+        // 关闭移动端菜单
+        function closeMobileMenu() {
+            const mobileSidebar = document.getElementById('mobileSidebar');
+            const mobileSidebarContent = document.getElementById('mobileSidebarContent');
+
+            mobileSidebarContent.classList.add('-translate-x-full');
+            setTimeout(() => {
+                mobileSidebar.classList.add('hidden');
+            }, 300);
+        }
+
+        // 初始化图表
+        function initCharts() {
+            // 销售趋势图
+            const salesTrendCtx = document.getElementById('salesTrendChart').getContext('2d');
+            const salesTrendChart = new Chart(salesTrendCtx, {
+                type: 'line',
+                data: {
+                    labels: ['1月15日', '1月16日', '1月17日', '1月18日', '1月19日', '1月20日', '1月21日'],
+                    datasets: [{
+                        label: '销售额',
+                        data: [8500, 9200, 7800, 10500, 9800, 11200, 12458],
+                        backgroundColor: 'rgba(237, 137, 54, 0.1)',
+                        borderColor: 'rgba(237, 137, 54, 1)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+
+            // 热销商品图
+            const topProductsCtx = document.getElementById('topProductsChart').getContext('2d');
+            const topProductsChart = new Chart(topProductsCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['有机蔬菜套装', '新鲜水果礼盒', '可口可乐 2L', '进口牛奶 1L', '巧克力礼盒'],
+                    datasets: [{
+                        label: '销量',
+                        data: [45, 38, 62, 51, 32],
+                        backgroundColor: [
+                            'rgba(26, 54, 93, 0.7)',
+                            'rgba(26, 54, 93, 0.6)',
+                            'rgba(26, 54, 93, 0.5)',
+                            'rgba(26, 54, 93, 0.4)',
+                            'rgba(26, 54, 93, 0.3)'
+                        ],
+                        borderWidth: 0,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        },
+                        y: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
